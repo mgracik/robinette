@@ -113,6 +113,11 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    client = IRCClientFactory(args.nickname, args.channel)
+    if args.channel.startswith('#'):
+        channel = args.channel
+    else:
+        channel = '#%s' % args.channel
+
+    client = IRCClientFactory(args.nickname, channel)
     reactor.connectTCP(args.server, args.port, client)
     reactor.run()
