@@ -1,3 +1,4 @@
+from dateutil import tz
 import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -34,6 +35,29 @@ class IRC(BaseHandler):
 
         """
         return self._chatbot.respond(msg)
+
+    @signature(args=['string'], returns='string')
+    def seen(self, nick):
+        """
+        Return the last time a user was seen.
+
+        """
+        db = self._mongo_conn.event_db
+        messages = db.events.find(
+            {'user': {'$regex': '^%s' % nick, '$options': 'i'}}
+        )
+        # Get latest.
+        messages = list(messages.sort([('_id', -1)]).limit(1))
+
+        if messages:
+            msg = messages[0]
+            return '%s was last seen on %s, saying: %s' % (
+                nick,
+                msg['_id'].generation_time.astimezone(tz.tzlocal()).strftime('%a %b %d %X'),
+                msg['msg']
+            )
+        else:
+            return 'I have not seen %s' % nick
 
     @signature(args=['int', 'int'], returns='int')
     def add(self, a, b):
