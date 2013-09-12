@@ -59,31 +59,5 @@ class IRC(BaseHandler):
         else:
             return 'I have not seen %s' % nick
 
-    @signature(args=['int', 'int'], returns='int')
-    def add(self, a, b):
-        """
-        Add two integers.
-
-        """
-        try:
-            a, b = int(a), int(b)
-        except ValueError:
-            return None
-
-        return a + b
-
-    @signature(args=['int', 'int'], returns='int')
-    def sub(self, a, b):
-        """
-        Subtract two integers.
-
-        """
-        try:
-            a, b = int(a), int(b)
-        except ValueError:
-            return None
-
-        return a - b
-
 
 irc = IRC(chatbot)
