@@ -13,19 +13,19 @@ from xmlrpc.util import signature
 class IRC(BaseHandler):
 
     def __init__(self, chatbot):
-        #self._mongo_conn = pymongo.MongoClient()
+        self._mongo_conn = pymongo.MongoClient()
         self._chatbot = chatbot
 
     def log(self, data):
         log.debug('Logged %s', data)
-        #event = {
-        #    _id: bson.ObjectId(),
-        #    user: user,
-        #    channel: channel,
-        #    msg: msg
-        #}
-        #db = self._mongo_conn.event_db
-        #db.events.insert(event, w=1)
+        event = {
+            '_id': bson.ObjectId(),
+            'user': data['user'],
+            'channel': data['channel'],
+            'msg': data['msg']
+        }
+        db = self._mongo_conn.event_db
+        db.events.insert(event, w=1)
 
     @signature(args=['string'], returns='string')
     def respond(self, msg):
