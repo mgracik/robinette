@@ -29,8 +29,20 @@ class IRCClient(irc.IRCClient):
         # log.debug('Received %s', msg)
         # INFO:__main__:Received {'msg': 'lalala', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
         # INFO:__main__:Received {'msg': 'r0b1n3tt3: bla bla bla', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
-        self.proxy.irc.log(msg)
+        self.proxy.irc.log('msg', msg)
         self.dispatch(msg)
+
+    def userJoined(self, user, channel):
+        data = dict(user=user, channel=channel)
+        self.proxy.irc.log('user_join', data)
+
+    def userLeft(self, user, channel):
+        data = dict(user=user, channel=channel)
+        self.proxy.irc.log('user_left', data)
+
+    def userQuit(self, user, quit_msg):
+        data = dict(user=user, quit_msg=quit_msg)
+        self.proxy.irc.log('user_quit', data)
 
     def dispatch(self, msg):
         available_methods = self.proxy.system.listMethods()

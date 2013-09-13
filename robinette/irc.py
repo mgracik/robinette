@@ -17,16 +17,52 @@ class IRC(BaseHandler):
         self._mongo_conn = pymongo.MongoClient()
         self._chatbot = chatbot
 
-    def log(self, data):
-        log.debug('Logged %s', data)
-        event = {
+    @property
+    def db(self):
+        return self._mongo_conn.irc_db
+
+    def log(self, event, data):
+        log.debug('Logged %s %s', event, data)
+        logmethod = '_log_%s' % event
+        if hasattr(self, logmethod):
+            method_obj = getattr(self, logmethod)
+            method_obj(event, data)
+
+    def _log_msg(self, event, data):
+        record = {
             '_id': bson.ObjectId(),
             'user': data['user'],
             'channel': data['channel'],
             'msg': data['msg']
         }
-        db = self._mongo_conn.event_db
-        db.events.insert(event, w=1)
+        self.db.messages.insert(record, w=1)
+
+    def _log_user_join(self, event, data):
+        record = {
+            '_id': bson.ObjectId(),
+            'user': data['user'],
+            'channel': data['channel'],
+            'event': event
+        }
+        self.db.events.insert(event, w=1)
+
+    def _log_user_left(self, event, data):
+        record = {
+            '_id': bson.ObjectId(),
+            'user': data['user'],
+            'channel': data['channel'],
+            'event': event
+        }
+        self.db.events.insert(event, w=1)
+
+    def _log_user_quit(self, event, data):
+        record = {
+            '_id': bson.ObjectId(),
+            'user': data['user'],
+            'quit_msg': data['quit_msg'],
+            'event': event
+        }
+        self.db.events.insert(event, w=1)
 
     @signature(args=['string'], returns='string')
     def respond(self, msg):
