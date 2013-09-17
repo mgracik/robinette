@@ -27,10 +27,6 @@ def catch_socket_error(func):
 
 class IRCClient(twisted_irc.IRCClient):
 
-    @staticmethod
-    def nick(user):
-        return user.split('!')[0]
-
     def signedOn(self):
         log.info('Signed on as %s', self.nickname)
         self.join(self.channel)
@@ -67,12 +63,14 @@ class IRCClient(twisted_irc.IRCClient):
         available_methods.remove('irc.log')  # Do not expose the log method.
         available_methods.remove('irc.respond')  # Same for respond.
         response = None
+        private = True
 
         if msg['msg'].startswith(self.nickname):
             respond_to = msg['msg'][len(self.nickname):]
             if respond_to[0] in (':', ','):
                 respond_to = respond_to[1:]
             response = self.proxy.irc.respond(respond_to.strip())
+            private = False
 
         elif msg['msg'].startswith('!'):
             cmdline = msg['msg'][1:].split()
@@ -90,13 +88,16 @@ class IRCClient(twisted_irc.IRCClient):
                 response = method_obj(msg, *params)
 
         if response:
-            self.respond(msg, response)
+            self.respond(msg, response, private)
 
-    def respond(self, msg, response):
-        self.msg(
-            msg['channel'],
-            '%s: %s' % (self.nick(msg['user']), response)
-        )
+    def respond(self, msg, response, private=True):
+        if private:
+            self.msg(IRC.nick(msg['user']), response)
+        else:
+            self.msg(
+                msg['channel'],
+                '%s: %s' % (IRC.nick(msg['user']), response)
+            )
 
     @property
     def nickname(self):

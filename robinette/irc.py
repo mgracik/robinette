@@ -14,6 +14,10 @@ class IRC(BaseHandler):
     USERLEFT = 'user_left'
     USERQUIT = 'user_quit'
 
+    @staticmethod
+    def nick(user):
+        return user.split('!', 1)[0]
+
     def __init__(self, chatbot):
         self._mongo_conn = pymongo.MongoClient()
         self._chatbot = chatbot
