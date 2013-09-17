@@ -10,7 +10,7 @@ class BaseHandler(object):
 
     def _get_public_method(self, method):
         if method not in list_public_methods(self):
-            raise Exception('Method %r not available' % method)
+            raise AttributeError('Method %r not available' % method)
 
         return getattr(self, method)
 
@@ -27,7 +27,7 @@ class _SystemHandler(BaseHandler):
             method_obj = BaseHandler._get_public_method(handler, method_name)
             return method_obj
 
-        raise Exception('Handler %r not available' % handler_name)
+        raise AttributeError('Handler %r not available' % handler_name)
 
     @signature(returns='list')
     def listMethods(self):
@@ -67,7 +67,7 @@ class AsyncXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
     def add_handler(self, handler, name=None):
         name = name or handler.__class__.__name__.lower()
         if name in self._register:
-            raise Exception('Handler %r already registered' % name)
+            raise ValueError('Handler %r already registered' % name)
 
         self._register[name] = handler
 
