@@ -38,7 +38,7 @@ class IRC(BaseHandler):
             'user': data['user'],
             'channel': data['channel'],
             'msg': data['msg'],
-            'timestamp': _id.generation_time.astimezone(tz.tzlocal())
+            'timestamp': _id.generation_time
         }, w=1)
 
     def _log_user_join(self, event, data):
@@ -87,7 +87,7 @@ class IRC(BaseHandler):
 
         if messages:
             msg = messages[0]
-            timestamp = msg['timestamp']
+            timestamp = msg['_id'].generation_time.astimezone(tz.tzlocal())
             return '%s was last seen on %s, saying: %s' % (
                 nick, timestamp.strftime('%a %b %d %X'), msg['msg']
             )
@@ -111,8 +111,8 @@ class IRC(BaseHandler):
         logout = list(logout.sort([('_id', -1)]).limit(1))
 
         if login and logout:
-            login_time = login[0]['_id'].generation_time.astimezone(tz.tzlocal())
-            logout_time = logout[0]['_id'].generation_time.astimezone(tz.tzlocal())
+            login_time = login[0]['_id'].generation_time
+            logout_time = logout[0]['_id'].generation_time
 
             messages = self.db.messages.find(
                 {'timestamp': {'$gt': logout_time, '$lt': login_time}}
