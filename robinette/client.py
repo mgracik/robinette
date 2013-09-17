@@ -1,19 +1,31 @@
 #!/usr/bin/env python
 
 import argparse
+import functools
 import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+import socket
 import xmlrpclib
 
 import twisted
 from twisted.internet import protocol, reactor
-from twisted.words import protocols
+from twisted.words.protocols import irc as twisted_irc
 
 from irc import IRC
 
 
-class IRCClient(protocols.irc.IRCClient):
+def catch_socket_error(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except socket.error as e:
+            log.error('%s', str(e))
+    return wrapper
+
+
+class IRCClient(twisted_irc.IRCClient):
 
     @staticmethod
     def nick(user):
@@ -26,6 +38,7 @@ class IRCClient(protocols.irc.IRCClient):
     def joined(self, channel):
         log.info('Joined %s', channel)
 
+    @catch_socket_error
     def privmsg(self, user, channel, msg):
         msg = dict(user=user, channel=channel, msg=msg)
         # log.debug('Received %s', msg)
@@ -34,14 +47,17 @@ class IRCClient(protocols.irc.IRCClient):
         self.proxy.irc.log(IRC.MESSAGE, msg)
         self.dispatch(msg)
 
+    @catch_socket_error
     def userJoined(self, user, channel):
         data = dict(user=user, channel=channel)
         self.proxy.irc.log(IRC.USERJOIN, data)
 
+    @catch_socket_error
     def userLeft(self, user, channel):
         data = dict(user=user, channel=channel)
         self.proxy.irc.log(IRC.USERLEFT, data)
 
+    @catch_socket_error
     def userQuit(self, user, quit_msg):
         data = dict(user=user, quit_msg=quit_msg)
         self.proxy.irc.log(IRC.USERQUIT, data)
