@@ -94,5 +94,34 @@ class IRC(BaseHandler):
         else:
             return 'I have not seen %s' % nick
 
+    @signature(returns='string')
+    def backlog(self, msg):
+        response = []
+
+        login = self.db.events.find({
+            'user': {'$regex': '^%s' % self.nick(msg['user']), '$options': 'i'},
+            'event': self.USERJOIN
+        })
+        login = list(login.sort([('_id', -1)]).limit(1))
+
+        logout = self.db.events.find({
+            'user': {'$regex': '^%s' % self.nick(msg['user']), '$options': 'i'},
+            'event': {'$in': [self.USERLEFT, self.USERQUIT]}
+        })
+        logout = list(logout.sort([('_id', -1)]).limit(1))
+
+        if login and logout:
+            login_time = login[0]['_id'].generation_time.astimezone(tz.tzlocal())
+            logout_time = logout[0]['_id'].generation_time.astimezone(tz.tzlocal())
+
+            messages = self.db.messages.find(
+                {'timestamp': {'$gt': logout_time, '$lt': login_time}}
+            )
+            messages = list(messages.sort([('_id', -1)]).limit(10))
+            for message in messages:
+                response.append('%s: %s' % (self.nick(message['user']), message['msg']))
+
+        return '\n'.join(response) if response else 'No messages'
+
 
 irc = IRC(chatbot)
