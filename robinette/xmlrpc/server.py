@@ -8,7 +8,7 @@ from .util import format_signature, signature
 
 class BaseHandler(object):
 
-    def _get_public_method(self, method):
+    def get_public_method(self, method):
         if method not in list_public_methods(self):
             raise AttributeError('Method %r not available' % method)
 
@@ -20,16 +20,16 @@ class _SystemHandler(BaseHandler):
     def __init__(self, xmlrpc_server):
         self._xmlrpc_server = xmlrpc_server
 
-    def _get_public_method(self, method):
+    def get_public_method(self, method):
         try:
             handler_name, method_name = method.split('.')
         except ValueError:
             raise AttributeError('Method %r not available' % method)
 
-        if handler_name in self._xmlrpc_server._register:
-            handler = self._xmlrpc_server._register[handler_name]
+        if handler_name in self._xmlrpc_server.register:
+            handler = self._xmlrpc_server.register[handler_name]
             try:
-                method_obj = BaseHandler._get_public_method(handler, method_name)
+                method_obj = BaseHandler.get_public_method(handler, method_name)
             except AttributeError:
                 raise AttributeError('Method %r not available' % method)
             return method_obj
@@ -39,7 +39,7 @@ class _SystemHandler(BaseHandler):
     @signature(returns='list')
     def listMethods(self):
         result = set()
-        for name, handler in self._xmlrpc_server._register.items():
+        for name, handler in self._xmlrpc_server.register.items():
             methods = list_public_methods(handler)
             methods = set('%s.%s' % (name, method) for method in methods)
             result.update(methods)
@@ -47,7 +47,7 @@ class _SystemHandler(BaseHandler):
 
     @signature(args=['string'], returns='string')
     def methodHelp(self, method):
-        method_obj = self._get_public_method(method)
+        method_obj = self.get_public_method(method)
         return '%s\n\n%s' % (
             self.methodSignature(method),
             pydoc.getdoc(method_obj)
@@ -55,7 +55,7 @@ class _SystemHandler(BaseHandler):
 
     @signature(args=['string'], returns='string')
     def methodSignature(self, method):
-        method_obj = self._get_public_method(method)
+        method_obj = self.get_public_method(method)
         return format_signature(method_obj)
 
 
@@ -68,7 +68,7 @@ class AsyncXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
 
     def _dispatch(self, method, params):
         system_handler = self._register['system']
-        method_obj = system_handler._get_public_method(method)
+        method_obj = system_handler.get_public_method(method)
         return method_obj(*params)
 
     def add_handler(self, handler, name=None):
@@ -84,3 +84,7 @@ class AsyncXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
             ':'.join(map(str, self.server_address))
         )
         SimpleXMLRPCServer.serve_forever(self, *args, **kwargs)
+
+    @property
+    def register(self):
+        return self._register
