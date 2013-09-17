@@ -8,10 +8,12 @@ import xmlrpclib
 
 import twisted
 from twisted.internet import protocol, reactor
-from twisted.words.protocols import irc
+from twisted.words import protocols
+
+from irc import IRC
 
 
-class IRCClient(irc.IRCClient):
+class IRCClient(protocols.irc.IRCClient):
 
     @staticmethod
     def nick(user):
@@ -29,24 +31,25 @@ class IRCClient(irc.IRCClient):
         # log.debug('Received %s', msg)
         # INFO:__main__:Received {'msg': 'lalala', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
         # INFO:__main__:Received {'msg': 'r0b1n3tt3: bla bla bla', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
-        self.proxy.irc.log('msg', msg)
+        self.proxy.irc.log(IRC.MESSAGE, msg)
         self.dispatch(msg)
 
     def userJoined(self, user, channel):
         data = dict(user=user, channel=channel)
-        self.proxy.irc.log('user_join', data)
+        self.proxy.irc.log(IRC.USERJOIN, data)
 
     def userLeft(self, user, channel):
         data = dict(user=user, channel=channel)
-        self.proxy.irc.log('user_left', data)
+        self.proxy.irc.log(IRC.USERLEFT, data)
 
     def userQuit(self, user, quit_msg):
         data = dict(user=user, quit_msg=quit_msg)
-        self.proxy.irc.log('user_quit', data)
+        self.proxy.irc.log(IRC.USERQUIT, data)
 
     def dispatch(self, msg):
         available_methods = self.proxy.system.listMethods()
         available_methods.remove('irc.log')  # Do not expose the log method.
+        available_methods.remove('irc.respond')  # Same for respond.
         response = None
 
         if msg['msg'].startswith(self.nickname):
@@ -61,7 +64,7 @@ class IRCClient(irc.IRCClient):
             if cmd == 'help':
                 if not params:
                     methods = [m[4:] for m in available_methods if m.startswith('irc.')]
-                    response = ', '.join(methods)
+                    response = 'Available commands: %s' % ', '.join(methods)
                 else:
                     method = 'irc.%s' % params[0]
                     if method in available_methods:
@@ -99,7 +102,7 @@ class IRCClientFactory(protocol.ClientFactory):
     def __init__(self, nickname, channel, proxy_addr=('localhost', 8000)):
         self.nickname = nickname
         self.channel = channel
-        self.proxy = xmlrpclib.ServerProxy('http://%s:%s/RPC2' % (proxy_addr))
+        self.proxy = xmlrpclib.ServerProxy('http://%s:%s/RPC2' % proxy_addr)
 
     def clientConnectionFailed(self, connector, reason):
         log.warning('Client connection failed')
