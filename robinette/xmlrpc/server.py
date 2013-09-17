@@ -21,7 +21,11 @@ class _SystemHandler(BaseHandler):
         self._xmlrpc_server = xmlrpc_server
 
     def _get_public_method(self, method):
-        handler_name, method_name = method.split('.')
+        try:
+            handler_name, method_name = method.split('.')
+        except ValueError:
+            raise AttributeError('Method %r not available' % method)
+
         if handler_name in self._xmlrpc_server._register:
             handler = self._xmlrpc_server._register[handler_name]
             try:
