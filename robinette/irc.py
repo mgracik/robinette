@@ -114,6 +114,10 @@ class IRC(BaseHandler):
             login_time = login[0]['_id'].generation_time
             logout_time = logout[0]['_id'].generation_time
 
+            # We need naive times for the query.
+            login_time = login_time.replace(tzinfo=None)
+            logout_time = logout_time.replace(tzinfo=None)
+
             messages = self.db.messages.find(
                 {'timestamp': {'$gt': logout_time, '$lt': login_time}}
             )
