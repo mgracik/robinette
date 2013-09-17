@@ -87,7 +87,7 @@ class IRCClient(twisted_irc.IRCClient):
                         response = self.proxy.system.methodHelp(method)
             elif 'irc.%s' % cmd in available_methods:
                 method_obj = getattr(self.proxy.irc, cmd)
-                response = method_obj(*params)
+                response = method_obj(msg, *params)
 
         if response:
             self.respond(msg, response)

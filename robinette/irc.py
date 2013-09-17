@@ -68,7 +68,7 @@ class IRC(BaseHandler):
         return self._chatbot.respond(msg)
 
     @signature(args=['string'], returns='string')
-    def seen(self, nick):
+    def seen(self, msg, nick):
         """
         Return the last time a user was seen.
 
