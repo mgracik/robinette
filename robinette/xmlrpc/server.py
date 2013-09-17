@@ -49,7 +49,7 @@ class _SystemHandler(BaseHandler):
     def methodHelp(self, method):
         method_obj = self.get_public_method(method)
         return '%s\n\n%s' % (
-            self.methodSignature(method),
+            format_signature(method_obj),
             pydoc.getdoc(method_obj)
         )
 
