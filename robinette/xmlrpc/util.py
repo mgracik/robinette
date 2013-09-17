@@ -1,6 +1,6 @@
 def format_signature(func):
     if not hasattr(func, '_signature'):
-        return '%s signature not available' % func.__name__
+        return '%s -- signature not available' % func.__name__
 
     return '%s(%s) -> %s' % (
         func.__name__,
