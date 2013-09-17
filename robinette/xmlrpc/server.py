@@ -78,13 +78,6 @@ class AsyncXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
 
         self._register[name] = handler
 
-    def serve_forever(self, *args, **kwargs):
-        print '%s listening on %s' % (
-            self.__class__.__name__,
-            ':'.join(map(str, self.server_address))
-        )
-        SimpleXMLRPCServer.serve_forever(self, *args, **kwargs)
-
     @property
     def register(self):
         return self._register
