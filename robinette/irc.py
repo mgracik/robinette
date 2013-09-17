@@ -1,9 +1,5 @@
-from dateutil import tz
-import logging
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__name__)
-
 import bson
+from dateutil import tz
 from nltk.chat.eliza import eliza_chatbot as chatbot
 import pymongo
 
@@ -13,56 +9,55 @@ from xmlrpc.util import signature
 
 class IRC(BaseHandler):
 
+    MESSAGE = 'msg'
+    USERJOIN = 'user_join'
+    USERLEFT = 'user_left'
+    USERQUIT = 'user_quit'
+
     def __init__(self, chatbot):
         self._mongo_conn = pymongo.MongoClient()
         self._chatbot = chatbot
 
     @property
     def db(self):
-        return self._mongo_conn.irc_db
+        return self._mongo_conn.robinette_db
 
     def log(self, event, data):
-        log.debug('Logged %s %s', event, data)
         logmethod = '_log_%s' % event
         if hasattr(self, logmethod):
-            method_obj = getattr(self, logmethod)
-            method_obj(event, data)
+            getattr(self, logmethod)(event, data)
 
     def _log_msg(self, event, data):
-        record = {
+        self.db.messages.insert({
             '_id': bson.ObjectId(),
             'user': data['user'],
             'channel': data['channel'],
             'msg': data['msg']
-        }
-        self.db.messages.insert(record, w=1)
+        }, w=1)
 
     def _log_user_join(self, event, data):
-        record = {
+        self.db.events.insert({
             '_id': bson.ObjectId(),
             'user': data['user'],
             'channel': data['channel'],
             'event': event
-        }
-        self.db.events.insert(event, w=1)
+        }, w=1)
 
     def _log_user_left(self, event, data):
-        record = {
+        self.db.events.insert({
             '_id': bson.ObjectId(),
             'user': data['user'],
             'channel': data['channel'],
             'event': event
-        }
-        self.db.events.insert(event, w=1)
+        }, w=1)
 
     def _log_user_quit(self, event, data):
-        record = {
+        self.db.events.insert({
             '_id': bson.ObjectId(),
             'user': data['user'],
             'quit_msg': data['quit_msg'],
             'event': event
-        }
-        self.db.events.insert(event, w=1)
+        }, w=1)
 
     @signature(args=['string'], returns='string')
     def respond(self, msg):
@@ -78,8 +73,7 @@ class IRC(BaseHandler):
         Return the last time a user was seen.
 
         """
-        db = self._mongo_conn.event_db
-        messages = db.events.find(
+        messages = self.db.messages.find(
             {'user': {'$regex': '^%s' % nick, '$options': 'i'}}
         )
         # Get latest.
@@ -87,10 +81,9 @@ class IRC(BaseHandler):
 
         if messages:
             msg = messages[0]
+            timestamp = msg['_id'].generation_time.astimezone(tz.tzlocal())
             return '%s was last seen on %s, saying: %s' % (
-                nick,
-                msg['_id'].generation_time.astimezone(tz.tzlocal()).strftime('%a %b %d %X'),
-                msg['msg']
+                nick, timestamp.strftime('%a %b %d %X'), msg['msg']
             )
         else:
             return 'I have not seen %s' % nick
