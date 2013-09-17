@@ -32,11 +32,13 @@ class IRC(BaseHandler):
             getattr(self, logmethod)(event, data)
 
     def _log_msg(self, event, data):
+        _id = bson.ObjectId()
         self.db.messages.insert({
-            '_id': bson.ObjectId(),
+            '_id': _id,
             'user': data['user'],
             'channel': data['channel'],
-            'msg': data['msg']
+            'msg': data['msg'],
+            'timestamp': _id.generation_time.astimezone(tz.tzlocal())
         }, w=1)
 
     def _log_user_join(self, event, data):
@@ -85,7 +87,7 @@ class IRC(BaseHandler):
 
         if messages:
             msg = messages[0]
-            timestamp = msg['_id'].generation_time.astimezone(tz.tzlocal())
+            timestamp = msg['timestamp']
             return '%s was last seen on %s, saying: %s' % (
                 nick, timestamp.strftime('%a %b %d %X'), msg['msg']
             )
