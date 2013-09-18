@@ -1,3 +1,4 @@
+import json
 import urllib2
 
 from BeautifulSoup import BeautifulSoup
@@ -145,15 +146,18 @@ class IRC(BaseHandler):
     def stock(self, msg, symbol):
         r = {'private': False, 'response': ''}
 
-        url = 'http://finance.yahoo.com/d/quotes.csv?s=%s&f=sl1c1p2' % symbol
+        url = 'http://query.yahooapis.com/v1/public/yql?q=select%%20Name%%2C%%20AskRealtime%%2C%%20BidRealtime%%20from%%20yahoo.finance.quotes%%20where%%20symbol%%20%%3D%%20%%22%s%%22&format=json&env=store%%3A%%2F%%2Fdatatables.org%%2Falltableswithkeys&callback=' % symbol
         data = urllib2.urlopen(url).read()
+        data = json.loads(data)
         try:
-            symbol, price, change, change_percent = data.strip().split(',')
-        except ValueError:
-            r['response'] = 'No data for %s' % symbol
+            quote = data[u'query'][u'results'][u'quote']
+        except KeyError:
             return r
 
-        r['response'] = '%s: %s %s (%s)' % (symbol, price, change, change_percent)
+        r['response'] = '%s -- Ask: %s, Bid: %s' % (
+            quote[u'Name'], quote[u'AskRealtime'], quote[u'BidRealtime']
+        )
+        print r
         return r
 
     @signature(args=['string'], returns='string')
