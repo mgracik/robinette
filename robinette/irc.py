@@ -98,7 +98,10 @@ class IRC(BaseHandler):
             return 'I have not seen %s' % nick
 
     @signature(returns='string')
-    def backlog(self, msg):
+    def backlog(self, msg, *params):
+        limit, = params
+        limit = min(max(10, limit), 50)
+
         response = []
 
         login = self.db.events.find({
@@ -124,7 +127,7 @@ class IRC(BaseHandler):
             messages = self.db.messages.find(
                 {'timestamp': {'$gt': logout_time, '$lt': login_time}}
             )
-            messages = list(messages.sort([('_id', -1)]).limit(10))
+            messages = list(messages.sort([('_id', -1)]).limit(limit))
             for message in messages:
                 response.append('%s: %s' % (self.nick(message['user']), message['msg']))
 
@@ -140,7 +143,7 @@ class IRC(BaseHandler):
             convertEntities=BeautifulSoup.HTML_ENTITIES
         )
         title = soup.find(id='eow-title')
-        return 'Youtube: %s' % title.getText()
+        return 'Youtube spoiler: %s' % title.getText()
 
 
 irc = IRC(chatbot)
