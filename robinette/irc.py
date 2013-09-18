@@ -99,7 +99,11 @@ class IRC(BaseHandler):
 
     @signature(returns='string')
     def backlog(self, msg, *params):
-        limit, = params
+        try:
+            limit, = params
+        except ValueError:
+            limit = 10
+
         limit = min(max(10, limit), 50)
 
         response = []
