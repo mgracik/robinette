@@ -142,6 +142,21 @@ class IRC(BaseHandler):
         return {'private': True, 'response': '\n'.join(response) if response else 'No messages'}
 
     @signature(args=['string'], returns='string')
+    def stock(self, msg, symbol):
+        r = {'private': False, 'response': ''}
+
+        url = 'http://finance.yahoo.com/d/quotes.csv?s=%s&f=sl1c1p2' % symbol
+        data = urllib2.urlopen(url).read()
+        try:
+            symbol, price, change, change_percent = data.strip().split(',')
+        except ValueError:
+            r['response'] = 'No data for %s' % symbol
+            return r
+
+        r['response'] = '%s: %s %s (%s)' % (symbol, price, change, change_percent)
+        return r
+
+    @signature(args=['string'], returns='string')
     def youtube(self, url):
         if not url.startswith('http://'):
             url = 'http://%s' % url
