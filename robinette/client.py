@@ -108,7 +108,7 @@ class IRCClient(twisted_irc.IRCClient):
         if isinstance(response, unicode):
             response = response.encode('utf-8')
 
-        if private:
+        if private or not msg['channel'].startswith('#'):
             self.msg(IRC.nick(msg['user']), response)
         else:
             prefix = '%s: ' % IRC.nick(msg['user']) if msg['user'] else ''
