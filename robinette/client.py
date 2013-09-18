@@ -40,7 +40,10 @@ class IRCClient(twisted_irc.IRCClient):
         # log.debug('Received %s', msg)
         # INFO:__main__:Received {'msg': 'lalala', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
         # INFO:__main__:Received {'msg': 'r0b1n3tt3: bla bla bla', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
-        self.proxy.irc.log(IRC.MESSAGE, msg)
+
+        # Do not log private messages.
+        if channel != self.nickname:
+            self.proxy.irc.log(IRC.MESSAGE, msg)
         self.dispatch(msg)
 
     @catch_socket_error
