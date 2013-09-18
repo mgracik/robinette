@@ -5,6 +5,7 @@ import functools
 import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+import re
 import socket
 import xmlrpclib
 
@@ -26,6 +27,10 @@ def catch_socket_error(func):
 
 
 class IRCClient(twisted_irc.IRCClient):
+
+    YOUTUBE_PATTERN = re.compile(
+        r'.*(?P<url>(http://)?(www\.)?youtube\.com/watch\?v=\S*)'
+    )
 
     def signedOn(self):
         log.info('Signed on as %s', self.nickname)
@@ -90,6 +95,13 @@ class IRCClient(twisted_irc.IRCClient):
                 method_obj = getattr(self.proxy.irc, cmd)
                 response = method_obj(msg, *params)
 
+        else:
+            m = self.YOUTUBE_PATTERN.match(msg['msg'])
+            if m:
+                response = self.proxy.irc.youtube(m.group('url'))
+                private = False
+                msg['user'] = ''  # Respond to all.
+
         if response:
             self.respond(msg, response, private)
 
@@ -97,10 +109,8 @@ class IRCClient(twisted_irc.IRCClient):
         if private:
             self.msg(IRC.nick(msg['user']), response)
         else:
-            self.msg(
-                msg['channel'],
-                '%s: %s' % (IRC.nick(msg['user']), response)
-            )
+            prefix = '%s: ' % IRC.nick(msg['user']) if msg['user'] else ''
+            self.msg(msg['channel'], '%s%s' % (prefix, response))
 
     @property
     def nickname(self):

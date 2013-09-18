@@ -1,3 +1,6 @@
+import urllib2
+
+from BeautifulSoup import BeautifulSoup
 import bson
 from dateutil import tz
 from nltk.chat.eliza import eliza_chatbot as chatbot
@@ -126,6 +129,18 @@ class IRC(BaseHandler):
                 response.append('%s: %s' % (self.nick(message['user']), message['msg']))
 
         return '\n'.join(response) if response else 'No messages'
+
+    @signature(args=['string'], returns='string')
+    def youtube(self, url):
+        if not url.startswith('http://'):
+            url = 'http://%s' % url
+        fobj = urllib2.urlopen(url)
+        soup = BeautifulSoup(
+            fobj.read(),
+            convertEntities=BeautifulSoup.HTML_ENTITIES
+        )
+        title = soup.find(id='eow-title')
+        return 'Youtube: %s' % title.getText()
 
 
 irc = IRC(chatbot)
