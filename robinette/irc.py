@@ -157,7 +157,6 @@ class IRC(BaseHandler):
         r['response'] = '%s -- Ask: %s, Bid: %s' % (
             quote[u'Name'], quote[u'AskRealtime'], quote[u'BidRealtime']
         )
-        print r
         return r
 
     @signature(args=['string'], returns='string')
