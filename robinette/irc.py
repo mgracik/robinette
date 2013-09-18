@@ -74,7 +74,7 @@ class IRC(BaseHandler):
         Respond to the message.
 
         """
-        return self._chatbot.respond(msg)
+        return {'private': False, 'response': self._chatbot.respond(msg)}
 
     @signature(args=['string'], returns='string')
     def seen(self, msg, nick):
@@ -82,6 +82,8 @@ class IRC(BaseHandler):
         Return the last time a user was seen.
 
         """
+        r = {'private': False, 'response': ''}
+
         messages = self.db.messages.find(
             {'user': {'$regex': '^%s' % nick, '$options': 'i'}}
         )
@@ -91,11 +93,13 @@ class IRC(BaseHandler):
         if messages:
             msg = messages[0]
             timestamp = msg['_id'].generation_time.astimezone(tz.tzlocal())
-            return '%s was last seen on %s, saying: %s' % (
+            r['response'] = '%s was last seen on %s, saying: %s' % (
                 nick, timestamp.strftime('%a %b %d %X'), msg['msg']
             )
+            return r
         else:
-            return 'I have not seen %s' % nick
+            r['response'] = 'I have not seen %s' % nick
+            return r
 
     @signature(returns='string')
     def backlog(self, msg, *params):
@@ -135,7 +139,7 @@ class IRC(BaseHandler):
             for message in messages:
                 response.append('%s: %s' % (self.nick(message['user']), message['msg']))
 
-        return '\n'.join(response) if response else 'No messages'
+        return {'private': True, 'response': '\n'.join(response) if response else 'No messages'}
 
     @signature(args=['string'], returns='string')
     def youtube(self, url):
@@ -147,7 +151,7 @@ class IRC(BaseHandler):
             convertEntities=BeautifulSoup.HTML_ENTITIES
         )
         title = soup.find(id='eow-title')
-        return 'Youtube spoiler: %s' % title.getText()
+        return {'private': False, 'response': 'Youtube spoiler: %s' % title.getText()}
 
 
 irc = IRC(chatbot)

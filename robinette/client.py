@@ -70,15 +70,13 @@ class IRCClient(twisted_irc.IRCClient):
         available_methods = self.proxy.system.listMethods()
         available_methods.remove('irc.log')  # Do not expose the log method.
         available_methods.remove('irc.respond')  # Same for respond.
-        response = None
-        private = True
+        response = {}
 
         if msg['msg'].startswith(self.nickname):
             respond_to = msg['msg'][len(self.nickname):]
             if respond_to[0] in (':', ','):
                 respond_to = respond_to[1:]
             response = self.proxy.irc.respond(respond_to.strip())
-            private = False
 
         elif msg['msg'].startswith('!'):
             cmdline = msg['msg'][1:].split()
@@ -87,10 +85,12 @@ class IRCClient(twisted_irc.IRCClient):
                 if not params:
                     methods = [m[4:] for m in available_methods if m.startswith('irc.')]
                     response = 'Available commands: %s' % ', '.join(methods)
+                    response = {'private': False, 'response': response}
                 else:
                     method = 'irc.%s' % params[0]
                     if method in available_methods:
                         response = self.proxy.system.methodHelp(method)
+                        response = {'private': False, 'response': response}
             elif 'irc.%s' % cmd in available_methods:
                 method_obj = getattr(self.proxy.irc, cmd)
                 response = method_obj(msg, *params)
@@ -99,11 +99,10 @@ class IRCClient(twisted_irc.IRCClient):
             m = self.YOUTUBE_PATTERN.match(msg['msg'])
             if m:
                 response = self.proxy.irc.youtube(m.group('url'))
-                private = False
                 msg['user'] = ''  # Respond to all.
 
         if response:
-            self.respond(msg, response, private)
+            self.respond(msg, response['response'], response['private'])
 
     def respond(self, msg, response, private=True):
         if isinstance(response, unicode):
