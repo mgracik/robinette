@@ -106,6 +106,9 @@ class IRCClient(twisted_irc.IRCClient):
             self.respond(msg, response, private)
 
     def respond(self, msg, response, private=True):
+        if isinstance(response, unicode):
+            response = response.encode('utf-8')
+
         if private:
             self.msg(IRC.nick(msg['user']), response)
         else:
