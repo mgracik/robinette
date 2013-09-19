@@ -137,7 +137,13 @@ class IRC(BaseHandler):
                 {'timestamp': {'$gt': logout_time, '$lt': login_time}}
             )
             messages = list(messages.sort([('_id', -1)]).limit(limit))
-            for message in messages:
+
+            context = self.db.messages.find(
+                {'timestamp': {'$lt': logout_time}}
+            )
+            context = list(context.sort([('_id', -1)]).limit(5))
+
+            for message in reversed(context + messages):
                 response.append('%s: %s' % (self.nick(message['user']), message['msg']))
 
         return {'private': True, 'response': '\n'.join(response) if response else 'No messages'}
