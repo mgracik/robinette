@@ -4,33 +4,32 @@ import argparse
 import functools
 import logging
 logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__name__)
-import re
+log = logging.getLogger('robinette.client')
 import socket
 import xmlrpclib
 
 import twisted
 from twisted.internet import protocol, reactor
-from twisted.words.protocols import irc as twisted_irc
-
-from irc import IRC
+from twisted.words.protocols import irc
 
 
-def catch_socket_error(func):
+def catch_socket_errors(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except socket.error as e:
-            log.error('%s', str(e))
+            params = args + tuple('%s=%r' % arg for arg in kwargs.items())
+            log.error(
+                '%s(%s) raised %s',
+                func.__name__,
+                ', '.join(map(str, params)),
+                str(e)
+            )
     return wrapper
 
 
-class IRCClient(twisted_irc.IRCClient):
-
-    YOUTUBE_PATTERN = re.compile(
-        r'.*(?P<url>(http://)?(www\.)?youtube\.com/watch\?v=\S*)'
-    )
+class IRCClient(irc.IRCClient):
 
     def signedOn(self):
         log.info('Signed on as %s', self.nickname)
@@ -39,80 +38,61 @@ class IRCClient(twisted_irc.IRCClient):
     def joined(self, channel):
         log.info('Joined %s', channel)
 
-    @catch_socket_error
     def privmsg(self, user, channel, msg):
-        msg = dict(user=user, channel=channel, msg=msg)
-        # log.debug('Received %s', msg)
-        # INFO:__main__:Received {'msg': 'lalala', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
-        # INFO:__main__:Received {'msg': 'r0b1n3tt3: bla bla bla', 'user': 'mgracik!~mgracik@proxy.seznam.cz', 'channel': '#finishers'}
+        message = {
+            'event': 'privmsg',
+            'data': {
+                'user': user,
+                'channel': channel,
+                'msg': msg,
+                'private': channel == self.nickname
+            }
+        }
+        self.dispatch(message)
 
-        # Do not log private messages.
-        if channel != self.nickname:
-            self.proxy.irc.log(IRC.MESSAGE, msg)
-        self.dispatch(msg)
-
-    @catch_socket_error
     def userJoined(self, user, channel):
-        data = dict(user=user, channel=channel)
-        self.proxy.irc.log(IRC.USERJOIN, data)
+        message = {
+            'event': 'user_join',
+            'data': {
+                'user': user,
+                'channel': channel
+            }
+        }
+        self.dispatch(message)
 
-    @catch_socket_error
     def userLeft(self, user, channel):
-        data = dict(user=user, channel=channel)
-        self.proxy.irc.log(IRC.USERLEFT, data)
+        message = {
+            'event': 'user_left',
+            'data': {
+                'user': user,
+                'channel': channel
+            }
+        }
+        self.dispatch(message)
 
-    @catch_socket_error
     def userQuit(self, user, quit_msg):
-        data = dict(user=user, quit_msg=quit_msg)
-        self.proxy.irc.log(IRC.USERQUIT, data)
+        message = {
+            'event': 'user_quit',
+            'data': {
+                'user': user,
+                'quit_msg': quit_msg
+            }
+        }
+        self.dispatch(message)
 
-    def dispatch(self, msg):
-        available_methods = self.proxy.system.listMethods()
-        available_methods.remove('irc.log')  # Do not expose the log method.
-        available_methods.remove('irc.respond')  # Same for respond.
-        response = {}
-
-        if msg['msg'].startswith(self.nickname):
-            respond_to = msg['msg'][len(self.nickname):]
-            if respond_to[0] in (':', ','):
-                respond_to = respond_to[1:]
-            response = self.proxy.irc.respond(respond_to.strip())
-
-        elif msg['msg'].startswith('!'):
-            cmdline = msg['msg'][1:].split()
-            cmd, params = cmdline[0], cmdline[1:]
-            if cmd == 'help':
-                if not params:
-                    methods = [m[4:] for m in available_methods if m.startswith('irc.')]
-                    response = 'Available commands: %s' % ', '.join(methods)
-                    response = {'private': False, 'response': response}
-                else:
-                    method = 'irc.%s' % params[0]
-                    if method in available_methods:
-                        response = self.proxy.system.methodHelp(method)
-                        response = {'private': False, 'response': response}
-            elif 'irc.%s' % cmd in available_methods:
-                method_obj = getattr(self.proxy.irc, cmd)
-                response = method_obj(msg, *params)
-
-        else:
-            m = self.YOUTUBE_PATTERN.match(msg['msg'])
-            if m:
-                response = self.proxy.irc.youtube(m.group('url'))
-                msg['user'] = ''  # Respond to all.
-
+    @catch_socket_errors
+    def dispatch(self, message):
+        log.debug('Received %s', message)
+        response = self.proxy.irc.process(message)
         if response:
-            self.respond(msg, response['response'], response['private'])
+            self.respond(response)
 
-    def respond(self, msg, response, private=True):
-        if isinstance(response, unicode):
-            response = response.encode('utf-8')
-
-        if private or not msg['channel'].startswith('#'):
-            self.msg(IRC.nick(msg['user']), response)
-        else:
-            prefix = '%s: ' % IRC.nick(msg['user']) if msg['user'] else ''
-            self.msg(msg['channel'], '%s%s' % (prefix, response))
+    def respond(self, response):
+        log.debug('Sending %s', response)
+        for line in response['msg']:
+            if isinstance(line, unicode):
+                line = line.encode('utf-8')
+            self.msg(response['receiver'], line)
 
     @property
     def nickname(self):
@@ -137,11 +117,11 @@ class IRCClientFactory(protocol.ClientFactory):
         self.proxy = xmlrpclib.ServerProxy('http://%s:%s/RPC2' % proxy_addr)
 
     def clientConnectionFailed(self, connector, reason):
-        log.warning('Client connection failed')
+        log.warning('Client connection failed: %s', reason)
         reactor.stop()
 
     def clientConnectionLost(self, connector, reason):
-        log.warning('Client connection lost')
+        log.warning('Client connection lost: %s', reason)
         try:
             reactor.stop()
         except twisted.internet.error.ReactorNotRunning:
@@ -153,7 +133,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--server', default='irc.freenode.net')
     parser.add_argument('-p', '--port', default=6667)
-    parser.add_argument('-n', '--nickname', default='r0b1n3tt3')
+    parser.add_argument('-n', '--nickname', default='rob1n3tt3')
     parser.add_argument('-c', '--channel', required=True)
     return parser.parse_args()
 
