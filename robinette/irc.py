@@ -189,7 +189,7 @@ class IRC(BaseHandler):
 
     def quote(self, data, symbol):
         params = {
-            'q': urllib.quote(YQL_QUERY % symbol),
+            'q': YQL_QUERY % symbol,
             'format': 'json',
             'env': 'store://datatables.org/alltableswithkeys'
         }
