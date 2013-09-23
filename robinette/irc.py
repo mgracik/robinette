@@ -17,7 +17,7 @@ from xmlrpc.server import BaseHandler
 from xmlrpc.util import signature
 
 
-YQL_QUERY = 'select Name, AskRealtime, BidRealtime from yahoo.finance.quote where symbol = "%s"'
+YQL_QUERY = 'select * from yahoo.finance.quote where symbol = "%s"'
 YQL_URL = 'http://query.yahooapis.com/v1/public/yql?%s'
 
 YOUTUBE_URL = re.compile(r'((?:www\.)?youtube\.com/watch\?v=\S+)')
