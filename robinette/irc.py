@@ -17,9 +17,6 @@ from xmlrpc.server import BaseHandler
 from xmlrpc.util import signature
 
 
-YQL_QUERY = 'select * from yahoo.finance.quote where symbol = "%s"'
-YQL_URL = 'http://query.yahooapis.com/v1/public/yql?%s'
-
 YOUTUBE_URL = re.compile(r'((?:www\.)?youtube\.com/watch\?v=\S+)')
 
 
@@ -188,12 +185,7 @@ class IRC(BaseHandler):
         return PrivMsg(self.db.backlog(nickname(data['user'])))
 
     def quote(self, data, symbol):
-        params = {
-            'q': YQL_QUERY % symbol,
-            'format': 'json',
-            'env': 'store://datatables.org/alltableswithkeys'
-        }
-        url = YQL_URL % urllib.urlencode(params)
+        url = 'http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20%3D%20%22{}%22%0A%09%09&format=json&env=http%3A%2F%2Fdatatables.org%2Falltables.env&callback='.format(symbol)
         data = urllib2.urlopen(url).read()
         data = json.loads(data)
         try:
