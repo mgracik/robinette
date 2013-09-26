@@ -6,6 +6,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('robinette.client')
 import socket
+import time
 import xmlrpclib
 
 import twisted
