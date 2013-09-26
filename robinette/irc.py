@@ -32,6 +32,7 @@ class MongoDB(object):
 
     def __init__(self):
         self._mongo_conn = pymongo.MongoClient()
+        self.cache = {}
 
     @property
     def db(self):
@@ -71,34 +72,43 @@ class MongoDB(object):
             'quit_msg': data['quit_msg'],
         }, w=1)
 
-    def backlog(self, nick, limit=20):
-        login = self.db.events.find({
-            'user': {'$regex': '^%s' % nick, '$options': 'i'},
-            'event': 'user_join'
-        })
-        login = list(login.sort([('_id', -1)]).limit(1))
+    def backlog(self, nick, limit=100, page=20):
 
-        logout = self.db.events.find({
-            'user': {'$regex': '^%s' % nick, '$options': 'i'},
-            'event': {'$in': ['user_left', 'user_quit']}
-        })
-        logout = list(logout.sort([('_id', -1)]).limit(1))
+        def timeout(timestamp):
+            return (
+                datetime.datetime.now() - timestamp >
+                datetime.timedelta(minutes=10)
+            )
 
-        if login and logout:
-            login_time = login[0]['_id'].generation_time
-            logout_time = logout[0]['_id'].generation_time
+        # Backlog cache.
+        if not nick in self.cache or timeout(self.cache[nick]['timestamp']):
+            self.cache[nick] = {
+                'timestamp': datetime.datetime.now(),
+                'messages': []
+            }
 
-            # We need naive times for the query.
-            login_time = login_time.replace(tzinfo=None)
-            logout_time = logout_time.replace(tzinfo=None)
-            # Add some context.
-            logout_time = logout_time - datetime.timedelta(minutes=2)
-
-            messages = self.db.messages.find({
-                'timestamp': {'$gt': logout_time, '$lt': login_time}
+            login = self.db.events.find({
+                'user': {'$regex': '^%s' % nick, '$options': 'i'},
+                'event': 'user_join'
             })
-            messages = list(messages.sort([('_id', -1)]).limit(limit))
+            login = list(login.sort([('_id', -1)]).limit(1))
 
+            if login:
+                login_time = login[0]['_id'].generation_time
+                # We need naive times for the query.
+                login_time = login_time.replace(tzinfo=None)
+
+                messages = self.db.messages.find({
+                    'timestamp': {'$lt': login_time}
+                })
+                messages = list(messages.sort([('_id', -1)]).limit(limit))
+                self.cache[nick]['messages'] = messages
+
+        # Pop last 20.
+        messages = self.cache[nick]['messages'][-page:]
+        self.cache[nick]['messages'] = self.cache[nick]['messages'][:-page]
+
+        if messages:
             return '\n'.join([
                 '[%s %s] %s' % (
                     message['_id'].generation_time.\
