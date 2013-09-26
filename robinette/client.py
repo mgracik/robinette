@@ -89,10 +89,13 @@ class IRCClient(irc.IRCClient):
 
     def respond(self, response):
         log.debug('Sending %s', response)
+        wait = 1 if len(response['msg'] > 5) else 0
         for line in response['msg']:
             if isinstance(line, unicode):
                 line = line.encode('utf-8')
             self.msg(response['receiver'], line)
+            if wait:
+                time.sleep(wait)
 
     @property
     def nickname(self):
