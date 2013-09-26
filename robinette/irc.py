@@ -72,7 +72,7 @@ class MongoDB(object):
             'quit_msg': data['quit_msg'],
         }, w=1)
 
-    def backlog(self, nick, limit=100, page=20):
+    def backlog(self, nick, limit=100, page=10):
 
         def timeout(timestamp):
             return (
@@ -104,9 +104,9 @@ class MongoDB(object):
                 messages = list(messages.sort([('_id', -1)]).limit(limit))
                 self.cache[nick]['messages'] = messages
 
-        # Pop last 20.
-        messages = self.cache[nick]['messages'][-page:]
-        self.cache[nick]['messages'] = self.cache[nick]['messages'][:-page]
+        # Pop last 10.
+        messages = self.cache[nick]['messages'][:page]
+        self.cache[nick]['messages'] = self.cache[nick]['messages'][page:]
 
         if messages:
             return '\n'.join([
