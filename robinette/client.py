@@ -46,8 +46,9 @@ class IRCClient(irc.IRCClient):
                 'user': user,
                 'channel': channel,
                 'msg': msg,
-                'private': channel == self.nickname
-            }
+                'private': channel == self.nickname,
+                'addressed_to_me': msg.startswith(self.nickname)
+            },
         }
         self.dispatch(message)
 

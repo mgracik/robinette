@@ -13,6 +13,7 @@ from dateutil import tz
 from nltk.chat.eliza import eliza_chatbot as chatbot
 import pymongo
 
+from robinette import Robinette
 from xmlrpc.server import BaseHandler
 from xmlrpc.util import signature
 
@@ -37,6 +38,10 @@ class MongoDB(object):
     @property
     def db(self):
         return self._mongo_conn.robinette_db
+
+    @property
+    def messages(self):
+        return self.db.messages.find()
 
     def log_privmsg(self, event, data):
         _id = bson.ObjectId()
@@ -141,6 +146,9 @@ class IRC(BaseHandler):
     def __init__(self):
         self.db = MongoDB()
 
+        self.chatbot = Robinette()
+        self.chatbot.train(self.db.messages)
+
     def process(self, message):
         event, data = message['event'], message['data']
 
@@ -171,10 +179,16 @@ class IRC(BaseHandler):
                 response = 'Command %r not available' % cmd
 
         else:
-            # Check for youtube urls.
-            response = '\n'.join([
-                self._youtube(url) for url in YOUTUBE_URL.findall(data['msg'])
-            ])
+            response = self.chatbot.communicate(
+                data['msg'],
+                reply=data['addressed_to_me']
+            )
+
+            if not response:
+                # Check for youtube urls.
+                response = '\n'.join([
+                    self._youtube(url) for url in YOUTUBE_URL.findall(data['msg'])
+                ])
 
         if not response:
             return {}
