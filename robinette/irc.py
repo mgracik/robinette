@@ -24,7 +24,7 @@ def nickname(user):
     return user.split('!', 1)[0]
 
 
-class PrivMsg(str):
+class PrivMsg(unicode):
     pass
 
 
