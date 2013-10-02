@@ -161,10 +161,21 @@ class IRC(BaseHandler):
 
         # Only messages need further processing.
         if event == 'privmsg':
-            return self._process_privmsg(data)
+            return self._process_privmsg(data, message['sender'])
 
-    def _process_privmsg(self, data):
+    def _process_privmsg(self, data, sender):
         log.debug('Processing %s', data)
+
+        # Strip my name.
+        msg = data['msg']
+        if msg.startswith(sender):
+            msg = msg[len(sender):]
+            msg = msg[1:] if msg[0] in (':', ',') else msg
+            msg = msg.strip()
+            data['msg'] = msg
+            addressed_to_me = True
+        else:
+            addressed_to_me = False
 
         if data['msg'].startswith('!'):
             cmdline = data['msg'][1:].split()
@@ -181,7 +192,7 @@ class IRC(BaseHandler):
         else:
             response = self.chatbot.communicate(
                 data['msg'],
-                reply=data['addressed_to_me']
+                reply=addressed_to_me or data['private']
             )
 
             if not response:

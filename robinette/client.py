@@ -42,12 +42,12 @@ class IRCClient(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         message = {
             'event': 'privmsg',
+            'sender': self.nickname,
             'data': {
                 'user': user,
                 'channel': channel,
                 'msg': msg,
-                'private': channel == self.nickname,
-                'addressed_to_me': msg.startswith(self.nickname)
+                'private': channel == self.nickname
             },
         }
         self.dispatch(message)
@@ -55,6 +55,7 @@ class IRCClient(irc.IRCClient):
     def userJoined(self, user, channel):
         message = {
             'event': 'user_join',
+            'sender': self.nickname,
             'data': {
                 'user': user,
                 'channel': channel
@@ -65,6 +66,7 @@ class IRCClient(irc.IRCClient):
     def userLeft(self, user, channel):
         message = {
             'event': 'user_left',
+            'sender': self.nickname,
             'data': {
                 'user': user,
                 'channel': channel
@@ -75,6 +77,7 @@ class IRCClient(irc.IRCClient):
     def userQuit(self, user, quit_msg):
         message = {
             'event': 'user_quit',
+            'sender': self.nickname,
             'data': {
                 'user': user,
                 'quit_msg': quit_msg
