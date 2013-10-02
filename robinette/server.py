@@ -5,7 +5,7 @@ from xmlrpc.server import AsyncXMLRPCServer
 
 
 if __name__ == '__main__':
-    server = AsyncXMLRPCServer(('localhost', 8000), allow_none=True)
+    server = AsyncXMLRPCServer(('localhost', 8000), allow_none=True, logRequests=False)
     server.add_handler(IRC())
 
     print 'Running on %s:%s' % tuple(map(str, server.server_address))

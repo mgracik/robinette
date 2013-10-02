@@ -32,6 +32,9 @@ def catch_socket_errors(func):
 
 class IRCClient(irc.IRCClient):
 
+    def __init__(self):
+        self.lineRate = 1
+
     def signedOn(self):
         log.info('Signed on as %s', self.nickname)
         self.join(self.channel)
@@ -94,13 +97,10 @@ class IRCClient(irc.IRCClient):
 
     def respond(self, response):
         log.debug('Sending %s', response)
-        wait = 1 if len(response['msg']) > 5 else 0
         for line in response['msg']:
             if isinstance(line, unicode):
                 line = line.encode('utf-8')
             self.msg(response['receiver'], line)
-            if wait:
-                time.sleep(wait)
 
     @property
     def nickname(self):
