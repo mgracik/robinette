@@ -7,11 +7,11 @@ def format_signature(func):
         func._signature = {'args': [], 'returns': None}
 
     argspec = inspect.getargspec(func)
-    args = izip_longest(
+    args = list(izip_longest(
         argspec.args[::-1],
         argspec.defaults[::-1],
         fillvalue=''
-    )[::-1]
+    ))[::-1]
     args = ['%s=%s' % (arg, default) if default else arg for arg, default in args]
 
     return '%s(%s) -> %s' % (
