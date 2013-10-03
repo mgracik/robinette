@@ -1,10 +1,25 @@
+import inspect
+from itertools import izip_longest
+
+
 def format_signature(func):
     if not hasattr(func, '_signature'):
-        return '%s -- signature not available' % func.__name__
+        func._signature = {'args': [], 'returns': None}
+
+    argspec = inspect.getargspec(func)
+    args = izip_longest(
+        argspec.args[::-1],
+        argspec.defaults[::-1],
+        fillvalue=''
+    )[::-1]
+    args = ['%s=%s' % (arg, default) if default else arg for arg, default in args]
 
     return '%s(%s) -> %s' % (
         func.__name__,
-        ', '.join(func._signature['args']),
+        ', '.join(
+            '%s %s' % arg for arg in
+            izip_longest(func._signature['args'], args)
+        ),
         func._signature['returns']
     )
 
